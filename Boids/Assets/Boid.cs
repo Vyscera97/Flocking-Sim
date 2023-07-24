@@ -71,8 +71,8 @@ public class Boid : MonoBehaviour
                     avoidVelocity -= distance;
                 }
             }
-            //avoidVelocity /= boids.Count;
-            newVelocity += (avoidVelocity * avoidFactor) * Time.deltaTime;
+            avoidVelocity /= boids.Count;
+            newVelocity += ((avoidVelocity - rb.velocity) * avoidFactor) * Time.deltaTime;
         }        
     }
 
@@ -91,7 +91,7 @@ public class Boid : MonoBehaviour
                 }
             }
             averageVelocity /= boids.Count;
-            newVelocity += (averageVelocity * alignFactor) * Time.deltaTime;
+            newVelocity += ((averageVelocity - rb.velocity) * alignFactor) * Time.deltaTime;
         }        
     }
 
@@ -111,7 +111,7 @@ public class Boid : MonoBehaviour
             }
             avgPos /= boids.Count;
             avgVector = avgPos - transform.position;
-            newVelocity += (avgVector * cohereFactor) * Time.deltaTime;
+            newVelocity += ((avgVector - rb.velocity) * cohereFactor) * Time.deltaTime;
         }        
     }
 
