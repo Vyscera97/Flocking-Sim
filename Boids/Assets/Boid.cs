@@ -38,22 +38,13 @@ public class Boid : MonoBehaviour
         AvoidBoids();
         AlignBoids();
         CohereBoids();
+        // Test if this is necessary, or if it's better to simply limit to max speed, as opposed to always going max speed
         rb.velocity = (rb.velocity + newVelocity).normalized * maxSpeed;
-
-        speed = rb.velocity.magnitude;
-        //rb.velocity = Vector2.ClampMagnitude(rb.velocity + newVelocity, maxSpeed);
-        /*
-        if (speed < minSpeed)
-        {
-            rb.velocity = newVelocity.normalized * minSpeed;            
-        }
-        else if (speed > maxSpeed)
-        {
-            rb.velocity = newVelocity.normalized * maxSpeed;
-        }
-        */
+        speed = rb.velocity.magnitude;        
         Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
         transform.rotation = rotation;
+
+        CheckEdge();
     }
 
     void AvoidBoids()
@@ -113,6 +104,34 @@ public class Boid : MonoBehaviour
             avgVector = avgPos - transform.position;
             newVelocity += ((avgVector - rb.velocity) * cohereFactor) * Time.deltaTime;
         }        
+    }
+
+    void CheckEdge()
+    {
+        //get a world space coord and transfom it to viewport space.
+        Vector3 pos = Camera.main.WorldToViewportPoint(transform.position);
+
+        //everything from here on is in viewport space where 0,0 is the bottom 
+        //left of your screen and 1,1 the top right.
+        if (pos.x <= 0.0f)
+        {
+            pos = new Vector3(1.0f, pos.y, pos.z);
+        }
+        else if (pos.x >= 1.0f)
+        {
+            pos = new Vector3(0.0f, pos.y, pos.z);
+        }
+        if (pos.y <= 0.0f)
+        {
+            pos = new Vector3(pos.x, 1.0f, pos.z);
+        }
+        else if (pos.y >= 1.0f)
+        {
+            pos = new Vector3(pos.x, 0.0f, pos.z);
+        }
+
+        //and here it gets transformed back to world space.
+        transform.position = Camera.main.ViewportToWorldPoint(pos);
     }
 
     void OnTriggerEnter2D(Collider2D collision)
