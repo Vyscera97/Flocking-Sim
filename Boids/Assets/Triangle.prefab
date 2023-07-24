@@ -137,11 +137,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   minDistance: 4
-  maxSpeed: 10
+  maxSpeed: 20
   minSpeed: 1
   speed: 0
   rotationSpeed: 0
   avoidFactor: 10
-  alignFactor: 10
-  cohereFactor: 1
+  alignFactor: 5
+  cohereFactor: 5
   boids: []

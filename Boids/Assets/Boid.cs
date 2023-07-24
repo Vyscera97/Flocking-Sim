@@ -14,8 +14,6 @@ public class Boid : MonoBehaviour
     [SerializeField] float alignFactor;
     [SerializeField] float cohereFactor;
 
-
-
     Rigidbody2D rb;
 
     [SerializeField]
@@ -62,7 +60,7 @@ public class Boid : MonoBehaviour
                     avoidVelocity -= distance;
                 }
             }
-            avoidVelocity /= boids.Count;
+            //avoidVelocity /= boids.Count;
             newVelocity += ((avoidVelocity - rb.velocity) * avoidFactor) * Time.deltaTime;
         }        
     }
