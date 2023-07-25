@@ -32,17 +32,64 @@ public class Boid : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    {        
-        AvoidBoids();
-        AlignBoids();
-        CohereBoids();
+    {
+        Flock();
+        //AvoidBoids();
+        //AlignBoids();
+        //CohereBoids();
         // Test if this is necessary, or if it's better to simply limit to max speed, as opposed to always going max speed
-        rb.velocity = (rb.velocity + newVelocity).normalized * maxSpeed;
-        speed = rb.velocity.magnitude;        
+        //rb.velocity = (rb.velocity + newVelocity).normalized * maxSpeed;
+        /*
+        speed = (rb.velocity + newVelocity).magnitude;  
+        if (speed > maxSpeed)
+        {
+            rb.velocity = (rb.velocity + newVelocity).normalized * maxSpeed;
+        }
+        else if (speed < minSpeed) 
+        {
+            rb.velocity = (rb.velocity + newVelocity).normalized * minSpeed;
+        }
+        else
+        {
+            rb.velocity+= newVelocity;
+        }
+        */
         Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
         transform.rotation = rotation;
 
         CheckEdge();
+    }
+
+    void Flock()
+    {
+        newVelocity = Vector2.zero;
+        Vector3 pos = transform.position;
+        Vector2 velocity = rb.velocity;
+        Vector2 avoidVelocity = Vector2.zero;
+        Vector2 averageVelocity = Vector2.zero;
+        Vector2 avgVector = Vector2.zero;
+        Vector3 avgPos = Vector3.zero;
+        if (boids.Count > 0)
+        {
+            foreach (GameObject boid in boids)
+            {
+                distance = (boid.transform.position - pos);
+                if (distance.magnitude < minDistance)
+                {                    
+                    Rigidbody2D otherRb = boid.GetComponent<Rigidbody2D>();
+                    averageVelocity += otherRb.velocity;
+                    avgPos += boid.transform.position;
+                    distance /= distance.sqrMagnitude;
+                    avoidVelocity -= distance;
+                }
+            }
+            avoidVelocity = (avoidVelocity - velocity) * avoidFactor;
+            averageVelocity = ((averageVelocity / boids.Count) - velocity) * alignFactor;
+            avgVector = avgPos / boids.Count - pos;
+            avgVector = (avgVector - velocity) * cohereFactor;
+            newVelocity += (avoidVelocity + averageVelocity + avgVector);
+        }
+        rb.velocity = ((rb.velocity + newVelocity).normalized * maxSpeed);
     }
 
     void AvoidBoids()
