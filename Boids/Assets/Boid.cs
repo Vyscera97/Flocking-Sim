@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Boid : MonoBehaviour
 {
@@ -17,165 +19,152 @@ public class Boid : MonoBehaviour
     Rigidbody2D rb;
 
     [SerializeField]
-    List<GameObject> boids = new List<GameObject>();
+    List<GameObject> boids = new();
 
-    Vector2 distance;
-    Vector2 newVelocity;
+    public bool isUpdated = false;
+    public bool useJobs = false;
+
+    public float distance;
+    public float2 velocity;
+    public float2 newVelocity;
+    public float3 difference;
+    public float3 pos;
 
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        Vector3 startingVector = Random.insideUnitCircle.normalized;
-        rb.velocity = startingVector * maxSpeed; 
+        Vector3 startingVector = UnityEngine.Random.insideUnitCircle.normalized;
+        rb.velocity = startingVector * maxSpeed;
     }
 
     // Update is called once per frame
     void Update()
-    {
-        Flock();
-        //AvoidBoids();
-        //AlignBoids();
-        //CohereBoids();
-        // Test if this is necessary, or if it's better to simply limit to max speed, as opposed to always going max speed
-        //rb.velocity = (rb.velocity + newVelocity).normalized * maxSpeed;
-        /*
-        speed = (rb.velocity + newVelocity).magnitude;  
-        if (speed > maxSpeed)
-        {
-            rb.velocity = (rb.velocity + newVelocity).normalized * maxSpeed;
-        }
-        else if (speed < minSpeed) 
-        {
-            rb.velocity = (rb.velocity + newVelocity).normalized * minSpeed;
-        }
-        else
-        {
-            rb.velocity+= newVelocity;
-        }
-        */
+    {  
+        isUpdated = false;
+        CheckEdge();
+        velocity = rb.velocity;
+        pos = transform.position;
+        Flock();        
         Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
         transform.rotation = rotation;
-
-        CheckEdge();
     }
 
     void Flock()
     {
-        newVelocity = Vector2.zero;
-        Vector3 pos = transform.position;
-        Vector2 velocity = rb.velocity;
-        Vector2 avoidVelocity = Vector2.zero;
-        Vector2 averageVelocity = Vector2.zero;
-        Vector2 avgVector = Vector2.zero;
-        Vector3 avgPos = Vector3.zero;
+        Boid Boid;        
+        float2 avoidVelocity = Vector2.zero;
+        float2 averageVelocity = Vector2.zero;
+        float3 avgVector = Vector3.zero;
+        float3 avgPos = Vector3.zero;
         if (boids.Count > 0)
         {
-            foreach (GameObject boid in boids)
+            if (useJobs)
             {
-                distance = (boid.transform.position - pos);
-                if (distance.magnitude < minDistance)
-                {                    
-                    Rigidbody2D otherRb = boid.GetComponent<Rigidbody2D>();
-                    averageVelocity += otherRb.velocity;
-                    avgPos += boid.transform.position;
-                    distance /= distance.sqrMagnitude;
-                    avoidVelocity -= distance;
+                NativeArray<float3> localFlockPositions = new NativeArray<float3>(boids.Count, Allocator.TempJob);
+                NativeArray<float2> localFlockVelocities = new NativeArray<float2>(boids.Count, Allocator.TempJob);
+                NativeArray<float3> newPos = new NativeArray<float3>(1, Allocator.TempJob);
+                NativeArray<float2> newVel = new NativeArray<float2>(2, Allocator.TempJob);
+                //NativeArray<float2> localFlockNewVelocities = new NativeArray<float2>(boids.Count, Allocator.Temp);
+
+                for (int i = 0; i < boids.Count; i++)
+                {
+                    Boid = boids[i].GetComponent<Boid>();
+                    localFlockPositions[i] = Boid.transform.position;
+                    if (Boid.isUpdated == true)
+                    {
+                        localFlockVelocities[i] = Boid.velocity;
+                    }
+                    else
+                    {
+                        localFlockVelocities[i] = Boid.newVelocity;
+                    }
                 }
+                
+                LocalFlockJob flockJob = new LocalFlockJob()
+                {
+                    localFlockPositions = localFlockPositions,
+                    localFlockVelocities = localFlockVelocities,
+                    newPos = newPos,
+                    newVel = newVel,
+                    minDistance = minDistance,
+                    //newVelocity = newVelocity,
+                    avoidVelocity = avoidVelocity,
+                    averageVelocity = averageVelocity,
+                    //avgVector = avgVector,
+                    avgPos = avgPos,
+                    pos = pos
+                };
+                JobHandle jobHandle = new JobHandle();
+                jobHandle = flockJob.Schedule(boids.Count, 1);
+                jobHandle.Complete();
+                localFlockPositions.Dispose();
+                localFlockVelocities.Dispose();
+                avoidVelocity = newVel[0];
+                averageVelocity = newVel[1];
+                avgPos = newPos[0];
+                newPos.Dispose();
+                newVel.Dispose();
+            }
+            else
+            {
+                foreach (GameObject boid in boids)
+                {
+                    float3 otherPos = boid.transform.position;
+                    difference = (otherPos - pos);
+                    distance = math.length(difference);
+                    if (distance < minDistance)
+                    {
+                        Boid = boid.GetComponent<Boid>();
+                        if (Boid.isUpdated)
+                        {
+                            averageVelocity += Boid.velocity;
+                        }
+                        else
+                        {
+                            averageVelocity += Boid.newVelocity;
+                        }
+                        avgPos += Boid.pos;
+                        distance /= (distance * distance);
+                        avoidVelocity -= distance;
+                    }
+                }
+
             }
             avoidVelocity = (avoidVelocity - velocity) * avoidFactor;
             averageVelocity = ((averageVelocity / boids.Count) - velocity) * alignFactor;
             avgVector = avgPos / boids.Count - pos;
-            avgVector = (avgVector - velocity) * cohereFactor;
-            newVelocity += (avoidVelocity + averageVelocity + avgVector);
+            // I HATE THIS WORKAROUND
+            Vector3 renameAvgVector = avgVector;
+            Vector2 alsoRenameThisVector = renameAvgVector;
+            float2 whyDoesThisWork = alsoRenameThisVector;
+            whyDoesThisWork = (whyDoesThisWork - velocity) * cohereFactor;
+            newVelocity = (avoidVelocity + averageVelocity + whyDoesThisWork);
         }
-        rb.velocity = ((rb.velocity + newVelocity).normalized * maxSpeed);
-    }
-
-    void AvoidBoids()
-    {
-        newVelocity = Vector2.zero;
-        Vector2 avoidVelocity = Vector2.zero;
-        if (boids.Count > 0)
-        {
-            foreach (GameObject boid in boids)
-            {
-                distance = (boid.transform.position - transform.position);
-                if (distance.magnitude < minDistance) 
-                {
-                    distance /= distance.sqrMagnitude;
-                    avoidVelocity -= distance;
-                }
-            }
-            //avoidVelocity /= boids.Count;
-            newVelocity += ((avoidVelocity - rb.velocity) * avoidFactor) * Time.deltaTime;
-        }        
-    }
-
-    void AlignBoids()
-    {
-        Vector2 averageVelocity = Vector2.zero;
-        if (boids.Count > 0)
-        {
-            foreach (GameObject boid in boids)
-            {
-                distance = (boid.transform.position - transform.position);
-                if (distance.magnitude < minDistance)
-                {
-                    Rigidbody2D otherRb = boid.GetComponent<Rigidbody2D>();
-                    averageVelocity += otherRb.velocity;
-                }
-            }
-            averageVelocity /= boids.Count;
-            newVelocity += ((averageVelocity - rb.velocity) * alignFactor) * Time.deltaTime;
-        }        
-    }
-
-    void CohereBoids()
-    {
-        Vector3 avgPos = Vector3.zero;
-        Vector2 avgVector = Vector2.zero;
-        if (boids.Count > 0)
-        {
-            foreach (GameObject boid in boids)
-            {
-                distance = (boid.transform.position - transform.position);
-                if (distance.magnitude < minDistance)
-                {
-                    avgPos += boid.transform.position;
-                }
-            }
-            avgPos /= boids.Count;
-            avgVector = avgPos - transform.position;
-            newVelocity += ((avgVector - rb.velocity) * cohereFactor) * Time.deltaTime;
-        }        
+        newVelocity = (math.normalize(velocity + newVelocity) * maxSpeed);        
+        rb.velocity = newVelocity;
+        isUpdated = true;
     }
 
     void CheckEdge()
     {
-        //get a world space coord and transfom it to viewport space.
-        Vector3 pos = Camera.main.WorldToViewportPoint(transform.position);
-
-        //everything from here on is in viewport space where 0,0 is the bottom 
-        //left of your screen and 1,1 the top right.
+        float3 pos = Camera.main.WorldToViewportPoint(transform.position);
         if (pos.x <= 0.0f)
         {
-            pos = new Vector3(1.0f, pos.y, pos.z);
+            pos = new float3(1.0f, pos.y, pos.z);
         }
         else if (pos.x >= 1.0f)
         {
-            pos = new Vector3(0.0f, pos.y, pos.z);
+            pos = new float3(0.0f, pos.y, pos.z);
         }
         if (pos.y <= 0.0f)
         {
-            pos = new Vector3(pos.x, 1.0f, pos.z);
+            pos = new float3(pos.x, 1.0f, pos.z);
         }
         else if (pos.y >= 1.0f)
         {
-            pos = new Vector3(pos.x, 0.0f, pos.z);
+            pos = new float3(pos.x, 0.0f, pos.z);
         }
-
-        //and here it gets transformed back to world space.
         transform.position = Camera.main.ViewportToWorldPoint(pos);
     }
 
@@ -188,7 +177,6 @@ public class Boid : MonoBehaviour
     {
         boids.Remove(collision.gameObject);
     }
-
    
     private void OnDrawGizmosSelected()
     {
@@ -204,6 +192,5 @@ public class Boid : MonoBehaviour
                 //Gizmos.DrawLine(transform.position, boid.transform.position);
             }
         }
-    }
-    
+    }    
 }
