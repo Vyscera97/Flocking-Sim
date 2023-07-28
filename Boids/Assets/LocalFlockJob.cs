@@ -4,12 +4,11 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
 
-[BurstCompile]
+[BurstCompile (CompileSynchronously = true)]
 public struct LocalFlockJob : IJob
 {
-    public NativeArray<float2> newVelocity;
+    public NativeArray<float2> newVelocities;
 
     [ReadOnly]
     public NativeArray<float2> localFlockPositions;
@@ -20,6 +19,8 @@ public struct LocalFlockJob : IJob
     public float2 position;
     [ReadOnly]
     public float2 velocity;
+    [ReadOnly]
+    public int index;
     [ReadOnly]
     public float minDistance;    
     [ReadOnly]
@@ -54,7 +55,7 @@ public struct LocalFlockJob : IJob
         averageVelocity = ((averageVelocity / localFlockCount) - velocity) * alignFactor;
         avgVector = (avgPos / localFlockCount) - position;
         avgVector = (avgVector - velocity) * cohereFactor;
-        newVelocity[0] = (avoidVelocity + averageVelocity + avgVector);
+        newVelocities[index] = velocity + (avoidVelocity + averageVelocity + avgVector);
 
     }
 }

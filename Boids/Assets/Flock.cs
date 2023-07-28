@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Jobs;
 
 public class Flock : MonoBehaviour
 {
@@ -28,9 +29,24 @@ public class Flock : MonoBehaviour
     [SerializeField] float alignFactor;
     [SerializeField] float cohereFactor;
 
+    [SerializeField]
+    List<GameObject> boids = new();
+
+    [SerializeField]
+    public Transform[] m_Transforms;
+    TransformAccessArray m_AccessArray;
+
+
+    NativeArray<float2> localFlockPositions;
+    NativeArray<float2> localFlockVelocities;
+    NativeArray<float2> newVelocities;
+    NativeArray<JobHandle> jobHandles;
+
     // Start is called before the first frame update
     void Start()
     {
+        m_AccessArray = new();
+
         height = cam.orthographicSize;
         width = height * cam.aspect;
 
@@ -42,22 +58,85 @@ public class Flock : MonoBehaviour
             Vector3 randomPos = new Vector3(x, y, 0);
             GameObject boid = Instantiate(boidPrefab, randomPos, Quaternion.identity);
             boid.transform.parent = transform;
+            boids.Add(boid);
+            m_AccessArray.Add(boid.transform);
         }
-    }
+    }       
 
     // Update is called once per frame
     void Update()
     {
-        NativeArray<float2> flockVelocities = new(flockSize, Allocator.TempJob);
-        NativeArray<float3> flockPositions = new(flockSize, Allocator.TempJob);
-        NativeArray<Quaternion> flockRotations = new(flockSize, Allocator.TempJob);
-        NativeArray<bool> updateChecks = new(flockSize, Allocator.TempJob);
+        jobHandles = new NativeArray<JobHandle>();         
+        newVelocities = new(flockSize, Allocator.TempJob);    
 
-        FlockJob job = new()
+        for (int i = 0; i < flockSize; i++)
         {
+            int index = i;
+            Boid Boid = boids[i].GetComponent<Boid>();            
+            float2 position = Boid.position;
+            float2 velocity = Boid.velocity;
+            List<GameObject> localBoids = Boid.localBoids;
 
+            if (localBoids != null)
+            {
+                localFlockPositions = new(localBoids.Count, Allocator.TempJob);
+                localFlockVelocities = new(localBoids.Count, Allocator.TempJob);
+
+                for (int j = 0; j < localBoids.Count; j++)
+                {
+                    Boid localBoid = localBoids[j].GetComponent<Boid>();
+                    localFlockPositions[j] = localBoid.position;
+                    localFlockVelocities[j] = localBoid.velocity;
+                }
+
+                LocalFlockJob localFlock = new()
+                {
+                    index = index,
+                    position = position,
+                    velocity = velocity,
+                    minDistance = minDistance,
+                    avoidFactor = avoidFactor,
+                    alignFactor = alignFactor,
+                    cohereFactor = cohereFactor,
+                    localFlockPositions = localFlockPositions,
+                    localFlockVelocities = localFlockVelocities,
+                    newVelocities = newVelocities
+                };
+
+                JobHandle localJobHandle = localFlock.Schedule();
+                jobHandles[i] = localJobHandle;
+            }
+        }
+
+        JobHandle.CompleteAll(jobHandles);        
+        localFlockPositions.Dispose();
+        localFlockVelocities.Dispose();
+        jobHandles.Dispose();
+
+        FlockJob flock = new()
+        {
+            speed = speed,
+            deltaTime = Time.deltaTime,
+            newVelocities = newVelocities,
         };
-        JobHandle jobHandler = job.Schedule(flockSize, 1);
 
+        JobHandle jobHandle = flock.Schedule(m_AccessArray);
+        jobHandle.Complete();
+
+        for (int i = 0; i < flockSize; i++)
+        {
+            Boid Boid = boids[i].GetComponent<Boid>();
+            Boid.velocity = newVelocities[i];
+        }
+        newVelocities.Dispose();
+    }
+
+    private void OnDestroy()
+    {
+        localFlockPositions.Dispose();
+        localFlockVelocities.Dispose();
+        m_AccessArray.Dispose();
+        newVelocities.Dispose();        
+        jobHandles.Dispose();
     }
 }

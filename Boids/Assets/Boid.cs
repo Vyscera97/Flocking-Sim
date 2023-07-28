@@ -16,10 +16,11 @@ public class Boid : MonoBehaviour
     [SerializeField] float alignFactor;
     [SerializeField] float cohereFactor;
 
-    Rigidbody2D rb;
+    // Shouldn't be necesary if using transform.position rather than rigidbody.velocity
+    //Rigidbody2D rb;
 
     [SerializeField]
-    List<GameObject> boids = new();
+    public List<GameObject> localBoids = new();
 
     public bool isUpdated = false;
     public bool useJobs = false;
@@ -27,124 +28,28 @@ public class Boid : MonoBehaviour
     public float distance;
     public float2 velocity;
     public float2 newVelocity;
-    public float3 difference;
-    public float3 pos;
+    public float2 difference;
+    public float2 position;
 
     // Start is called before the first frame update
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
-        Vector3 startingVector = UnityEngine.Random.insideUnitCircle.normalized;
-        rb.velocity = startingVector * maxSpeed;
+        //rb = GetComponent<Rigidbody2D>();
+        float2 startingVector = UnityEngine.Random.insideUnitCircle.normalized;
+        velocity = startingVector;
     }
 
     // Update is called once per frame
     void Update()
     {  
-        isUpdated = false;
+        //isUpdated = false;
         CheckEdge();
-        velocity = rb.velocity;
-        pos = transform.position;
-        Flock();        
-        Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
-        transform.rotation = rotation;
+        //velocity = rb.velocity;
+        position = new float2(transform.position.x, transform.position.y);       
+        //Quaternion rotation = Quaternion.LookRotation(transform.forward, velocity);
+       // transform.rotation = rotation;
     }
 
-    void Flock()
-    {
-        Boid Boid;        
-        float2 avoidVelocity = Vector2.zero;
-        float2 averageVelocity = Vector2.zero;
-        float3 avgVector = Vector3.zero;
-        float3 avgPos = Vector3.zero;
-        if (boids.Count > 0)
-        {
-            if (useJobs)
-            {
-                NativeArray<float3> localFlockPositions = new NativeArray<float3>(boids.Count, Allocator.TempJob);
-                NativeArray<float2> localFlockVelocities = new NativeArray<float2>(boids.Count, Allocator.TempJob);
-                NativeArray<float3> newPos = new NativeArray<float3>(1, Allocator.TempJob);
-                NativeArray<float2> newVel = new NativeArray<float2>(2, Allocator.TempJob);
-                //NativeArray<float2> localFlockNewVelocities = new NativeArray<float2>(boids.Count, Allocator.Temp);
-
-                for (int i = 0; i < boids.Count; i++)
-                {
-                    Boid = boids[i].GetComponent<Boid>();
-                    localFlockPositions[i] = Boid.transform.position;
-                    if (Boid.isUpdated == true)
-                    {
-                        localFlockVelocities[i] = Boid.velocity;
-                    }
-                    else
-                    {
-                        localFlockVelocities[i] = Boid.newVelocity;
-                    }
-                }
-                
-                LocalFlockJob flockJob = new LocalFlockJob()
-                {
-                    localFlockPositions = localFlockPositions,
-                    localFlockVelocities = localFlockVelocities,
-                    newPos = newPos,
-                    newVel = newVel,
-                    minDistance = minDistance,
-                    //newVelocity = newVelocity,
-                    avoidVelocity = avoidVelocity,
-                    averageVelocity = averageVelocity,
-                    //avgVector = avgVector,
-                    avgPos = avgPos,
-                    pos = pos
-                };
-                JobHandle jobHandle = new JobHandle();
-                jobHandle = flockJob.Schedule(boids.Count, 1);
-                jobHandle.Complete();
-                localFlockPositions.Dispose();
-                localFlockVelocities.Dispose();
-                avoidVelocity = newVel[0];
-                averageVelocity = newVel[1];
-                avgPos = newPos[0];
-                newPos.Dispose();
-                newVel.Dispose();
-            }
-            else
-            {
-                foreach (GameObject boid in boids)
-                {
-                    float3 otherPos = boid.transform.position;
-                    difference = (otherPos - pos);
-                    distance = math.length(difference);
-                    if (distance < minDistance)
-                    {
-                        Boid = boid.GetComponent<Boid>();
-                        if (Boid.isUpdated)
-                        {
-                            averageVelocity += Boid.velocity;
-                        }
-                        else
-                        {
-                            averageVelocity += Boid.newVelocity;
-                        }
-                        avgPos += Boid.pos;
-                        distance /= (distance * distance);
-                        avoidVelocity -= distance;
-                    }
-                }
-
-            }
-            avoidVelocity = (avoidVelocity - velocity) * avoidFactor;
-            averageVelocity = ((averageVelocity / boids.Count) - velocity) * alignFactor;
-            avgVector = avgPos / boids.Count - pos;
-            // I HATE THIS WORKAROUND
-            Vector3 renameAvgVector = avgVector;
-            Vector2 alsoRenameThisVector = renameAvgVector;
-            float2 whyDoesThisWork = alsoRenameThisVector;
-            whyDoesThisWork = (whyDoesThisWork - velocity) * cohereFactor;
-            newVelocity = (avoidVelocity + averageVelocity + whyDoesThisWork);
-        }
-        newVelocity = (math.normalize(velocity + newVelocity) * maxSpeed);        
-        rb.velocity = newVelocity;
-        isUpdated = true;
-    }
 
     void CheckEdge()
     {
@@ -170,19 +75,19 @@ public class Boid : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D collision)
     {
-        boids.Add(collision.gameObject);
+        localBoids.Add(collision.gameObject);
     }
 
     void OnTriggerExit2D(Collider2D collision)
     {
-        boids.Remove(collision.gameObject);
+        localBoids.Remove(collision.gameObject);
     }
    
     private void OnDrawGizmosSelected()
     {
-        if (boids.Count > 0)
+        if (localBoids.Count > 0)
         {
-            foreach (GameObject boid in boids)
+            foreach (GameObject boid in localBoids)
             {
                 
                 if ((boid.transform.position - transform.position).magnitude < minDistance)
