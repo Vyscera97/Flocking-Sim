@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 7537756599939875765}
   - component: {fileID: 7537756599939875764}
   - component: {fileID: 7537756599939875763}
-  - component: {fileID: 7537756599939875766}
   - component: {fileID: 7537756599939875767}
   m_Layer: 0
   m_Name: Triangle
@@ -103,27 +102,6 @@ CircleCollider2D:
   m_Offset: {x: 0, y: 0.21133333}
   serializedVersion: 2
   m_Radius: 1.5
---- !u!50 &7537756599939875766
-Rigidbody2D:
-  serializedVersion: 4
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7537756599939875762}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDrag: 0
-  m_AngularDrag: 0.05
-  m_GravityScale: 0
-  m_Material: {fileID: 0}
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 0
 --- !u!114 &7537756599939875767
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -144,6 +122,19 @@ MonoBehaviour:
   avoidFactor: 0.15
   alignFactor: 0.15
   cohereFactor: 0.15
-  boids: []
+  localBoids: []
   isUpdated: 0
   useJobs: 1
+  distance: 0
+  velocity:
+    x: 0
+    y: 0
+  newVelocity:
+    x: 0
+    y: 0
+  difference:
+    x: 0
+    y: 0
+  position:
+    x: 0
+    y: 0

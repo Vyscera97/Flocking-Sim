@@ -41,7 +41,7 @@ public struct LocalFlockJob : IJob
 
         for (int i = 0; i < localFlockPositions.Length; i++)
         {
-            float2 difference = (localFlockPositions[i] - position); ;
+            float2 difference = (localFlockPositions[i] - position); 
             if (math.length(difference) < minDistance)
             {
                 avgPos += localFlockPositions[i];
