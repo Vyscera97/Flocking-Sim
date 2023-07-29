@@ -4,8 +4,19 @@ using UnityEngine;
 
 public class Flock : MonoBehaviour
 {
-    [SerializeField]
-    float flockSize;
+    [SerializeField] 
+    public float flockSize;
+    [SerializeField] 
+    public float flockSpeed;
+    [SerializeField] 
+    public float minDistance;
+    [SerializeField] 
+    public float avoidFactor;
+    [SerializeField] 
+    public float alignFactor;
+    [SerializeField] 
+    public float cohereFactor;
+    
     [SerializeField]
     GameObject boidPrefab;
     [SerializeField]
