@@ -16,7 +16,8 @@ public class Boid : MonoBehaviour
     [SerializeField]
     List<GameObject> boids = new List<GameObject>();
 
-    Vector2 distance;
+    Vector2 difference;
+    Vector2 velocity;
     Vector2 newVelocity;
 
     // Start is called before the first frame update
@@ -30,46 +31,48 @@ public class Boid : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        rb.velocity = newVelocity;
-        Flock();
-        
         Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
         transform.rotation = rotation;
-
         CheckEdge();
+    }
+
+    private void FixedUpdate()
+    {
+        rb.velocity = newVelocity;
+        Flock();
     }
 
     void Flock()
     {
+        velocity = newVelocity;
         newVelocity = Vector2.zero;
-        Vector3 pos = transform.position;
-        Vector2 velocity = rb.velocity;
+        Vector3 pos = transform.position;        
         Vector2 avoidVelocity = Vector2.zero;
         Vector2 averageVelocity = Vector2.zero;
         Vector2 avgVector = Vector2.zero;
         Vector3 avgPos = Vector3.zero;
         if (boids.Count > 0)
-        {
+        {            
             foreach (GameObject boid in boids)
             {
                 Boid Boid = boid.GetComponent<Boid>();
-                distance = (boid.transform.position - pos);
-                if (distance.magnitude < minDistance)
+                difference = (boid.transform.position - pos);
+                if (difference.magnitude < minDistance)
                 {
                     Rigidbody2D otherRb = boid.GetComponent<Rigidbody2D>();
-                    averageVelocity += otherRb.velocity;
+                    averageVelocity += Boid.velocity;
                     avgPos += boid.transform.position;
-                    distance /= distance.sqrMagnitude;
-                    avoidVelocity -= distance;
+                    difference /= difference.sqrMagnitude;
+                    avoidVelocity -= difference;
                 }
             }
             avoidVelocity = (avoidVelocity) * avoidFactor;
             averageVelocity = ((averageVelocity / boids.Count) - velocity) * alignFactor;
             avgVector = avgPos / boids.Count - pos;
             avgVector = (avgVector - velocity) * cohereFactor;
-            newVelocity += rb.velocity + (avoidVelocity + averageVelocity + avgVector);
+            newVelocity = (avoidVelocity + averageVelocity + avgVector);
         }  
-        newVelocity = (newVelocity + rb.velocity).normalized * maxSpeed;
+        newVelocity = (velocity + newVelocity).normalized * maxSpeed;
     }
 
     void CheckEdge()

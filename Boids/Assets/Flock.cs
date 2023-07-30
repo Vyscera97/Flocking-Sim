@@ -5,7 +5,8 @@ using UnityEngine;
 public class Flock : MonoBehaviour
 {
     [SerializeField] 
-    public float flockSize;
+    float flockSize;
+
     [SerializeField] 
     public float flockSpeed;
     [SerializeField] 
