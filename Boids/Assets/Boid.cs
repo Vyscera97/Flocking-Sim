@@ -1,115 +1,98 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Collections;
-using Unity.Jobs;
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Boid : MonoBehaviour
 {
-    Flock flockmanager;
-
-    float minDistance;
-    float speed;
-    float avoidFactor;
-    float alignFactor;
-    float cohereFactor;
+    [SerializeField] float minDistance;
+    [SerializeField] float maxSpeed;
+    [SerializeField] float avoidFactor;
+    [SerializeField] float alignFactor;
+    [SerializeField] float cohereFactor;
 
     Rigidbody2D rb;
 
     [SerializeField]
-    List<GameObject> boids = new();
+    List<GameObject> boids = new List<GameObject>();
 
-    public float distance;
-    public float2 velocity;
-    public float2 newVelocity;
-    public float2 difference;
-    public float2 pos;
+    Vector2 distance;
+    Vector2 newVelocity;
 
     // Start is called before the first frame update
     void Start()
     {
-        flockmanager = FindAnyObjectByType(typeof( Flock )).GetComponent<Flock>();
-
-        minDistance = flockmanager.minDistance;
-        speed = flockmanager.flockSpeed;
-        avoidFactor = flockmanager.avoidFactor / 10;
-        alignFactor = flockmanager.alignFactor / 10;
-        cohereFactor = flockmanager.cohereFactor / 10;
-
         rb = GetComponent<Rigidbody2D>();
-        Vector2 startingVector = UnityEngine.Random.insideUnitCircle.normalized;
-        rb.velocity = startingVector * speed; 
+        Vector3 startingVector = Random.insideUnitCircle.normalized;
+        newVelocity = startingVector * maxSpeed;
     }
 
     // Update is called once per frame
     void Update()
     {
-        CheckEdge();
-        velocity = rb.velocity;                
-        pos = new float2(transform.position.x, transform.position.y);
-        Flock();        
+        rb.velocity = newVelocity;
+        Flock();
+        
         Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
         transform.rotation = rotation;
+
+        CheckEdge();
     }
 
     void Flock()
     {
-        Boid Boid;
-        float2 avoidVelocity = float2.zero;
-        float2 averageVelocity = float2.zero;
-        float2 avgVector = float2.zero;
-        float2 avgPos = float2.zero;
-        //newVelocity = float2.zero;
-
+        newVelocity = Vector2.zero;
+        Vector3 pos = transform.position;
+        Vector2 velocity = rb.velocity;
+        Vector2 avoidVelocity = Vector2.zero;
+        Vector2 averageVelocity = Vector2.zero;
+        Vector2 avgVector = Vector2.zero;
+        Vector3 avgPos = Vector3.zero;
         if (boids.Count > 0)
         {
             foreach (GameObject boid in boids)
             {
-                Boid = boid.GetComponent<Boid>();
-                float2 otherPos = Boid.pos;
-                difference = (otherPos - pos);
-                distance = math.length(difference);
-                if (distance < minDistance)
+                Boid Boid = boid.GetComponent<Boid>();
+                distance = (boid.transform.position - pos);
+                if (distance.magnitude < minDistance)
                 {
-                    difference /= math.lengthsq(distance);
-                    avoidVelocity -= difference;
-                    averageVelocity += Boid.velocity;
-                    avgPos += otherPos;                    
+                    Rigidbody2D otherRb = boid.GetComponent<Rigidbody2D>();
+                    averageVelocity += otherRb.velocity;
+                    avgPos += boid.transform.position;
+                    distance /= distance.sqrMagnitude;
+                    avoidVelocity -= distance;
                 }
             }
-            
-            avoidVelocity = (avoidVelocity - velocity) * avoidFactor;
+            avoidVelocity = (avoidVelocity) * avoidFactor;
             averageVelocity = ((averageVelocity / boids.Count) - velocity) * alignFactor;
-            avgVector = avgPos / boids.Count - pos;            
+            avgVector = avgPos / boids.Count - pos;
             avgVector = (avgVector - velocity) * cohereFactor;
-            newVelocity = (avoidVelocity + averageVelocity + avgVector);
-        }
-
-        newVelocity = math.normalize(velocity + newVelocity);
-        rb.velocity = newVelocity * speed;
+            newVelocity += rb.velocity + (avoidVelocity + averageVelocity + avgVector);
+        }  
+        newVelocity = (newVelocity + rb.velocity).normalized * maxSpeed;
     }
 
     void CheckEdge()
-    {
-        float3 pos = Camera.main.WorldToViewportPoint(transform.position);
+    {        
+        Vector3 pos = Camera.main.WorldToViewportPoint(transform.position);
+        
         if (pos.x <= 0.0f)
         {
-            pos = new float3(1.0f, pos.y, pos.z);
+            pos = new Vector3(1.0f, pos.y, pos.z);
         }
         else if (pos.x >= 1.0f)
         {
-            pos = new float3(0.0f, pos.y, pos.z);
+            pos = new Vector3(0.0f, pos.y, pos.z);
         }
         if (pos.y <= 0.0f)
         {
-            pos = new float3(pos.x, 1.0f, pos.z);
+            pos = new Vector3(pos.x, 1.0f, pos.z);
         }
         else if (pos.y >= 1.0f)
         {
-            pos = new float3(pos.x, 0.0f, pos.z);
+            pos = new Vector3(pos.x, 0.0f, pos.z);
         }
+
         transform.position = Camera.main.ViewportToWorldPoint(pos);
     }
 
@@ -122,6 +105,7 @@ public class Boid : MonoBehaviour
     {
         boids.Remove(collision.gameObject);
     }
+
 
     private void OnDrawGizmosSelected()
     {
