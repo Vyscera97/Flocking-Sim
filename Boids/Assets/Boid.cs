@@ -4,17 +4,20 @@ using UnityEngine;
 using Unity.Burst;
 using Unity.Mathematics;
 using UnityEngine.UIElements;
+using Unity.VisualScripting;
 
 [BurstCompile(CompileSynchronously = true)]
 public class Boid : MonoBehaviour
 {
-    [SerializeField] float minDistance;
-    [SerializeField] float maxSpeed;
-    [SerializeField] float avoidFactor;
-    [SerializeField] float alignFactor;
-    [SerializeField] float cohereFactor;
+    float minDistance;
+    float maxSpeed;
+    float avoidFactor;
+    float alignFactor;
+    float cohereFactor;
 
     Rigidbody2D rb;
+
+    Flock flockManager;
 
     [SerializeField]
     List<GameObject> boids = new List<GameObject>();
@@ -27,6 +30,13 @@ public class Boid : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        flockManager = FindAnyObjectByType(typeof(Flock)).GetComponent<Flock>();
+        minDistance = flockManager.minDistance;
+        maxSpeed = flockManager.flockSpeed;
+        avoidFactor = flockManager.avoidFactor / 10;
+        alignFactor = flockManager.alignFactor / 10;
+        cohereFactor = flockManager.cohereFactor / 10;
+
         rb = GetComponent<Rigidbody2D>();
         float2 startingVector = UnityEngine.Random.insideUnitCircle.normalized;
         newVelocity = startingVector * maxSpeed;
@@ -34,16 +44,22 @@ public class Boid : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    {        
+    {
+        minDistance = flockManager.minDistance;
+        maxSpeed = flockManager.flockSpeed;
+        avoidFactor = flockManager.avoidFactor / 10;
+        alignFactor = flockManager.alignFactor / 10;
+        cohereFactor = flockManager.cohereFactor / 10;
+
         Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
-        transform.rotation = rotation;
-        CheckEdge();
+        transform.rotation = rotation;        
     }
 
     private void FixedUpdate()
     {
         rb.velocity = newVelocity;
         Flock();
+        CheckEdge();
     }
 
     void Flock()
