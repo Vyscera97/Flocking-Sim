@@ -1,34 +1,38 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Flock : MonoBehaviour
 {
     [SerializeField] 
     float flockSize;
-
     [SerializeField] 
     public float flockSpeed;
     [SerializeField] 
     public float minDistance;
-    [SerializeField] 
-    public float avoidFactor;
-    [SerializeField] 
-    public float alignFactor;
-    [SerializeField] 
-    public float cohereFactor;
-    
+
     [SerializeField]
-    GameObject boidPrefab;
+    public Camera cam;
     [SerializeField]
-    Camera cam;
+    GameObject boidPrefab;    
+
+    [SerializeField]
+    Slider AvoidSlider;
+    [SerializeField]
+    Slider AlignSlider;
+    [SerializeField]
+    Slider CohereSlider;
 
     public float height;
     public float width;
+    public float avoidFactor;
+    public float alignFactor;
+    public float cohereFactor;
+
     // Start is called before the first frame update
     void Start()
     {
-
         height = cam.orthographicSize;
         width = height * cam.aspect;
 
@@ -45,7 +49,9 @@ public class Flock : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    {
-        
+    {      
+        avoidFactor = AvoidSlider.value;
+        alignFactor = AlignSlider.value;
+        cohereFactor = CohereSlider.value;        
     }
 }

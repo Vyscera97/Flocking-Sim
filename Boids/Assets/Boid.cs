@@ -3,24 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Burst;
 using Unity.Mathematics;
-using UnityEngine.UIElements;
-using Unity.VisualScripting;
 
 [BurstCompile(CompileSynchronously = true)]
 public class Boid : MonoBehaviour
 {
+    [SerializeField]
+    List<GameObject> boids = new List<GameObject>();    
+
+    Rigidbody2D rb;
+    Flock flockManager;
+    Camera cam;
+
     float minDistance;
     float maxSpeed;
     float avoidFactor;
     float alignFactor;
     float cohereFactor;
-
-    Rigidbody2D rb;
-
-    Flock flockManager;
-
-    [SerializeField]
-    List<GameObject> boids = new List<GameObject>();
 
     float2 difference;
     float2 pos;
@@ -30,12 +28,13 @@ public class Boid : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        flockManager = FindAnyObjectByType(typeof(Flock)).GetComponent<Flock>();
+        flockManager = GameObject.Find("Flock").GetComponent<Flock>();
+        cam = flockManager.cam;        
         minDistance = flockManager.minDistance;
         maxSpeed = flockManager.flockSpeed;
-        avoidFactor = flockManager.avoidFactor / 10;
-        alignFactor = flockManager.alignFactor / 10;
-        cohereFactor = flockManager.cohereFactor / 10;
+        avoidFactor = flockManager.avoidFactor / 1.5f;
+        alignFactor = flockManager.alignFactor / 10f;
+        cohereFactor = flockManager.cohereFactor / 5f;
 
         rb = GetComponent<Rigidbody2D>();
         float2 startingVector = UnityEngine.Random.insideUnitCircle.normalized;
@@ -47,17 +46,16 @@ public class Boid : MonoBehaviour
     {
         minDistance = flockManager.minDistance;
         maxSpeed = flockManager.flockSpeed;
-        avoidFactor = flockManager.avoidFactor / 10;
-        alignFactor = flockManager.alignFactor / 10;
-        cohereFactor = flockManager.cohereFactor / 10;
-
-        Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
-        transform.rotation = rotation;        
+        avoidFactor = flockManager.avoidFactor / 1.5f;
+        alignFactor = flockManager.alignFactor / 10f;
+        cohereFactor = flockManager.cohereFactor / 5f;                
     }
 
     private void FixedUpdate()
     {
         rb.velocity = newVelocity;
+        Quaternion rotation = Quaternion.LookRotation(transform.forward, rb.velocity);
+        transform.rotation = rotation;
         Flock();
         CheckEdge();
     }
@@ -80,14 +78,13 @@ public class Boid : MonoBehaviour
                 difference = (otherPos - pos);
                 if (math.length(difference) < minDistance)
                 {
-                    Rigidbody2D otherRb = boid.GetComponent<Rigidbody2D>();
                     averageVelocity += Boid.velocity;
                     avgPos += otherPos;
                     difference /= math.lengthsq(difference);
                     avoidVelocity -= difference;
                 }
             }
-            avoidVelocity = (avoidVelocity - velocity) * avoidFactor;
+            avoidVelocity = (avoidVelocity) * avoidFactor;
             averageVelocity = ((averageVelocity / boids.Count) - velocity) * alignFactor;
             avgVector = avgPos / boids.Count - pos;
             avgVector = (avgVector - velocity) * cohereFactor;
@@ -98,7 +95,7 @@ public class Boid : MonoBehaviour
 
     void CheckEdge()
     {
-        Vector3 pos = Camera.main.WorldToViewportPoint(transform.position);
+        Vector3 pos = cam.WorldToViewportPoint(transform.position);
 
         if (pos.x <= 0.0f)
         {
@@ -117,7 +114,7 @@ public class Boid : MonoBehaviour
             pos = new Vector3(pos.x, 0.0f, pos.z);
         }
 
-        transform.position = Camera.main.ViewportToWorldPoint(pos);
+        transform.position = cam.ViewportToWorldPoint(pos);
     }
 
     void OnTriggerEnter2D(Collider2D collision)

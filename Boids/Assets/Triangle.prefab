@@ -136,9 +136,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bed9cb6b6ce03c84e86acd9616bbfa44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minDistance: 5
-  maxSpeed: 15
-  avoidFactor: 0.15
-  alignFactor: 0.15
-  cohereFactor: 0.15
   boids: []
