@@ -33,6 +33,8 @@ public class Flock : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Application.targetFrameRate = 120;
+
         height = cam.orthographicSize;
         width = height * cam.aspect;
 
@@ -45,6 +47,8 @@ public class Flock : MonoBehaviour
             GameObject boid = Instantiate(boidPrefab, randomPos, Quaternion.identity);
             boid.transform.parent = transform;
         }
+
+        Time.timeScale = 0;
     }
 
     // Update is called once per frame

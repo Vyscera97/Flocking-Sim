@@ -2,35 +2,49 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using UnityEngine;
+using UnityEngine.UI;
+using Unity.VisualScripting;
 
 public class InputManager : MonoBehaviour
 {
-    GameObject canvas;
+    [SerializeField]
+    GameObject sliders;
+    [SerializeField]
+    GameObject menus;
 
-    void Start()
+    void Awake()
     {
-        canvas = GameObject.Find("Canvas");
+        //canvas = GameObject.Find("Canvas");
     }
 
     // Update is called once per frame
     void Update()
     {
-        Keyboard kb = Keyboard.current;
+        Keyboard kb = Keyboard.current;       
 
         if (kb.escapeKey.wasPressedThisFrame)
         {
-            Application.Quit();
+            if (menus.activeSelf)
+            {
+                menus.SetActive(false);
+                Time.timeScale = 1;
+            }
+            else
+            {
+                menus.SetActive(true);
+                Time.timeScale = 0f;
+            }
         }
 
         if (kb.tabKey.wasPressedThisFrame)
         {
-            if (canvas.activeSelf)
+            if (sliders.activeSelf)
             {
-                canvas.SetActive(false);
+                sliders.SetActive(false);
             }
             else
             {
-                canvas.SetActive(true);
+                sliders.SetActive(true);
             }
         }
 
