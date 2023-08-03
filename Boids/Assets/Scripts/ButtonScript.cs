@@ -32,9 +32,7 @@ public class ButtonScript : MonoBehaviour
 
     private void Awake()
     {
-        Application.targetFrameRate = 60;
-        Screen.SetResolution(1920, 1080, true);
-        QualitySettings.vSyncCount = 1;
+        Application.targetFrameRate = 240;
     }
 
     private void OnEnable()
@@ -77,11 +75,11 @@ public class ButtonScript : MonoBehaviour
     {
         if (fullscreen_Toggle.isOn)
         {
-            Screen.SetResolution(1920, 1080, true);
+            Screen.fullScreenMode = FullScreenMode.ExclusiveFullScreen;
         }
         else
         {
-            Screen.SetResolution(1080, 720, false);
+            Screen.fullScreenMode = FullScreenMode.Windowed;
         }
     }
 

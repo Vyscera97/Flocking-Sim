@@ -12,9 +12,9 @@ public class InputManager : MonoBehaviour
     [SerializeField]
     GameObject menus;
 
-    void Awake()
+    private void Awake()
     {
-        //canvas = GameObject.Find("Canvas");
+        Application.targetFrameRate = 240;
     }
 
     // Update is called once per frame
