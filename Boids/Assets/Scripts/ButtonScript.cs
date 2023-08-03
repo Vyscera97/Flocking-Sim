@@ -28,12 +28,7 @@ public class ButtonScript : MonoBehaviour
     [SerializeField]
     Slider musicVolumeSlider;
     [SerializeField]
-    Slider sfxVolumeSlider;
-
-    private void Awake()
-    {
-        Application.targetFrameRate = 240;
-    }
+    Slider sfxVolumeSlider;    
 
     private void OnEnable()
     {
