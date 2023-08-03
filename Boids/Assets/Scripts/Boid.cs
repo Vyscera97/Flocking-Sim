@@ -1,10 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Burst;
 using Unity.Mathematics;
 
-[BurstCompile(CompileSynchronously = true)]
 public class Boid : MonoBehaviour
 {
     [SerializeField]
